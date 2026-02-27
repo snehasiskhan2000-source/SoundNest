@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>WaveMusic | Premium Audio</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="app-container">
+        <header>
+            <h1><span class="highlight">Wave</span>Music</h1>
+            <div class="search-bar">
+                <input type="text" id="searchInput" placeholder="Search for artists, songs, or podcasts...">
+                <button onclick="searchMusic()">Search</button>
+            </div>
+        </header>
+
+        <main id="resultsContainer" class="results-grid">
+            </main>
+
+        <div class="bottom-player" id="playerContainer">
+            <img id="playerImage" src="https://via.placeholder.com/60" alt="Album Art">
+            <div class="track-info">
+                <h4 id="playerTitle">Select a track</h4>
+                <p id="playerArtist">-</p>
+            </div>
+            <audio id="audioPlayer" controls></audio>
+        </div>
+    </div>
+    <script src="script.js"></script>
+</body>
+</html>
