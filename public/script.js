@@ -5,7 +5,7 @@ let currentQuery = 'Trending Music';
 let isFetching = false;
 let progressInterval;
 
-// SVG Templates from HTML
+// --- SVG Templates from HTML ---
 const svgPlay = document.getElementById('svg-play').innerHTML;
 const svgPause = document.getElementById('svg-pause').innerHTML;
 const svgVol = document.getElementById('svg-vol').innerHTML;
@@ -119,6 +119,12 @@ function playVideo(videoId, title) {
     setTimeout(() => { controls.style.opacity = ''; }, 3000);
 }
 
+// Handle tapping anywhere on the video wrapper to play/pause
+function handleVideoTap(event) {
+    if (event.target.closest('.custom-controls')) return;
+    togglePlay();
+}
+
 function togglePlay() {
     if (!isPlayerReady) return;
     const state = player.getPlayerState();
@@ -149,6 +155,24 @@ function toggleMute() {
     } else { 
         player.mute(); 
         muteBtn.innerHTML = svgMute;
+    }
+}
+
+// Request Native Browser Fullscreen
+function toggleFullScreen() {
+    const playerElem = document.getElementById('playerSection');
+    if (!document.fullscreenElement && !document.webkitFullscreenElement) {
+        if (playerElem.requestFullscreen) {
+            playerElem.requestFullscreen();
+        } else if (playerElem.webkitRequestFullscreen) { 
+            playerElem.webkitRequestFullscreen();
+        }
+    } else {
+        if (document.exitFullscreen) {
+            document.exitFullscreen();
+        } else if (document.webkitExitFullscreen) { 
+            document.webkitExitFullscreen();
+        }
     }
 }
 
@@ -258,8 +282,12 @@ function renderCards(contents) {
     contents.forEach(item => {
         if (item.video) {
             const vid = item.video;
-            const thumbUrl = vid.thumbnails[vid.thumbnails.length - 1].url;
             
+            // Mathematically extract the highest resolution thumbnail available
+            const bestThumb = vid.thumbnails.reduce((max, thumb) => (thumb.width > max.width ? thumb : max), vid.thumbnails[0]);
+            const thumbUrl = bestThumb.url;
+            
+            // Format duration accurately
             let durationText = "";
             if (vid.lengthText) {
                 durationText = vid.lengthText;
@@ -301,6 +329,7 @@ function formatViews(views) {
     return views;
 }
 
+// Infinite Scroll Observer
 const observer = new IntersectionObserver((entries) => {
     if (entries[0].isIntersecting && currentCursor && !isFetching) {
         fetchYouTubeData(currentQuery);
