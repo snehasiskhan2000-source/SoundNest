@@ -5,13 +5,13 @@ let currentQuery = 'Trending Music';
 let isFetching = false;
 let progressInterval;
 
-// SVG Templates from HTML
+// --- SVG Templates from HTML ---
 const svgPlay = document.getElementById('svg-play').innerHTML;
 const svgPause = document.getElementById('svg-pause').innerHTML;
 const svgVol = document.getElementById('svg-vol').innerHTML;
 const svgMute = document.getElementById('svg-mute').innerHTML;
 
-// SEARCH BAR ANIMATION LOGIC
+// --- 1. SEARCH BAR ANIMATION LOGIC ---
 const searchInput = document.getElementById('searchInput');
 const searchContainer = document.getElementById('searchContainer');
 const logo = document.querySelector('.logo');
@@ -26,41 +26,60 @@ searchInput.addEventListener('blur', () => {
     logo.style.opacity = '1';
 });
 
-// YOUTUBE API SETUP
+// --- 2. YOUTUBE API SETUP ---
+// We leave this empty so it doesn't crash when the hidden player has no size
 function onYouTubeIframeAPIReady() {
-    player = new YT.Player('ytPlayer', {
-        height: '100%', width: '100%',
-        playerVars: { 
-            'autoplay': 1, 'controls': 0, 'disablekb': 1, 
-            'fs': 0, 'modestbranding': 1, 'rel': 0, 'showinfo': 0 
-        },
-        events: {
-            'onReady': () => { isPlayerReady = true; },
-            'onStateChange': onPlayerStateChange
-        }
-    });
+    console.log("YouTube API loaded. Waiting for user click...");
 }
 
-// CUSTOM PLAYER LOGIC WITH SVGs
+// --- 3. CUSTOM PLAYER LOGIC WITH SVGs ---
 function playVideo(videoId, title) {
-    if (!isPlayerReady) return;
+    const playerSection = document.getElementById('playerSection');
     
-    document.getElementById('playerSection').classList.remove('hidden');
+    // 1. Unhide the container FIRST so YouTube can calculate its size
+    playerSection.classList.remove('hidden');
     document.getElementById('nowPlayingTitle').innerText = title;
     
-    player.loadVideoById(videoId);
+    // 2. If this is the first click, build the actual player
+    if (!player) {
+        player = new YT.Player('ytPlayer', {
+            height: '100%', width: '100%',
+            videoId: videoId, 
+            playerVars: { 
+                'autoplay': 1, 'controls': 0, 'disablekb': 1, 
+                'fs': 0, 'modestbranding': 1, 'rel': 0, 'showinfo': 0 
+            },
+            events: {
+                'onReady': (event) => { 
+                    isPlayerReady = true; 
+                    event.target.playVideo(); 
+                },
+                'onStateChange': onPlayerStateChange
+            }
+        });
+    } else {
+        // 3. If player is already built, just swap the video
+        if (isPlayerReady) {
+            player.loadVideoById(videoId);
+        }
+    }
+    
+    // Update UI buttons
     document.getElementById('playPauseBtn').innerHTML = svgPause; 
     window.scrollTo({ top: 0, behavior: 'smooth' });
 
+    // Flash the custom controls briefly for mobile users
     const controls = document.getElementById('customControls');
     controls.style.opacity = '1';
     setTimeout(() => { controls.style.opacity = ''; }, 3000);
 }
 
 function togglePlay() {
+    if (!isPlayerReady) return;
     const state = player.getPlayerState();
     const btn = document.getElementById('playPauseBtn');
     
+    // Quick pop animation
     btn.style.transform = "scale(0.8)";
     setTimeout(() => btn.style.transform = "", 150);
 
@@ -74,6 +93,7 @@ function togglePlay() {
 }
 
 function toggleMute() {
+    if (!isPlayerReady) return;
     const muteBtn = document.getElementById('muteBtn');
     
     muteBtn.style.transform = "scale(0.8)";
@@ -90,7 +110,7 @@ function toggleMute() {
 
 function closePlayer() {
     document.getElementById('playerSection').classList.add('hidden');
-    player.stopVideo();
+    if (isPlayerReady) player.stopVideo();
     clearInterval(progressInterval);
 }
 
@@ -135,7 +155,7 @@ function formatTime(seconds) {
     return `${m}:${s < 10 ? '0' : ''}${s}`;
 }
 
-// FETCH & INFINITE SCROLL
+// --- 4. FETCH & INFINITE SCROLL ---
 window.addEventListener('DOMContentLoaded', () => { fetchYouTubeData(currentQuery); });
 
 function handleNewSearch() {
@@ -183,7 +203,7 @@ async function fetchYouTubeData(query) {
     }
 }
 
-// UPDATED RENDER FUNCTION WITH DURATION FIX
+// --- 5. RENDER UI CARDS & DURATION ---
 function renderCards(contents) {
     const container = document.getElementById('resultsContainer');
     if (!contents) return;
@@ -193,6 +213,7 @@ function renderCards(contents) {
             const vid = item.video;
             const thumbUrl = vid.thumbnails[vid.thumbnails.length - 1].url;
             
+            // Format duration accurately
             let durationText = "";
             if (vid.lengthText) {
                 durationText = vid.lengthText;
@@ -234,6 +255,7 @@ function formatViews(views) {
     return views;
 }
 
+// Infinite Scroll Observer
 const observer = new IntersectionObserver((entries) => {
     if (entries[0].isIntersecting && currentCursor && !isFetching) {
         fetchYouTubeData(currentQuery);
@@ -241,3 +263,4 @@ const observer = new IntersectionObserver((entries) => {
 }, { rootMargin: '300px' });
 
 observer.observe(document.getElementById('loadingSentinel'));
+                                                                                                              
