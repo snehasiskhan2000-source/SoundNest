@@ -3,56 +3,29 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>SoundNest | Premium Audio</title>
+    <title>TubeNest | Video & Music</title>
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
     <div class="app-container">
         <header>
-            <h1><span class="highlight">Sound</span>Nest</h1>
+            <h1><span class="highlight">Tube</span>Nest</h1>
             <div class="search-bar">
-                <input type="text" id="searchInput" placeholder="Search for artists, songs, or podcasts...">
-                <button onclick="searchMusic()">Search</button>
+                <input type="text" id="searchInput" placeholder="Search YouTube videos & music...">
+                <button onclick="searchYouTube()">Search</button>
             </div>
         </header>
 
+        <div id="playerSection" class="player-container hidden">
+            <div class="video-wrapper">
+                <iframe id="ytPlayer" src="" frameborder="0" allow="autoplay; encrypted-media; picture-in-picture" allowfullscreen></iframe>
+            </div>
+            <h2 id="nowPlayingTitle">Loading...</h2>
+        </div>
+
         <main id="resultsContainer" class="results-grid">
-            </main>
-
-        <div class="bottom-player" id="miniPlayer" onclick="toggleFullScreenPlayer()">
-            <img id="playerImage" src="https://via.placeholder.com/60" alt="Album Art">
-            <div class="track-info">
-                <h4 id="playerTitle">Select a track</h4>
-                <p id="playerArtist">-</p>
-            </div>
-            <audio id="audioPlayer"></audio>
-            <button id="miniPlayBtn" onclick="togglePlay(event)" class="control-btn">▶️</button>
-        </div>
-
-        <div class="full-player hidden" id="fullPlayer">
-            <div class="full-player-header">
-                <button onclick="toggleFullScreenPlayer()" class="control-btn">🔽</button>
-                <span>NOW PLAYING</span>
-                <button class="control-btn">⋮</button>
-            </div>
-            <img id="fsImage" src="https://via.placeholder.com/300" alt="Album Art">
-            <div class="fs-track-info">
-                <h2 id="fsTitle">Select a track</h2>
-                <p id="fsArtist">-</p>
-            </div>
-            <div class="progress-area">
-                <div class="time-container">
-                    <span id="currentTime">0:00</span>
-                    <span id="totalTime">0:00</span>
-                </div>
-                <input type="range" id="progressBar" value="0" max="100">
-            </div>
-            <div class="main-controls">
-                <button class="control-btn">⏮</button>
-                <button id="mainPlayBtn" onclick="togglePlay(event)" class="play-pause-btn">▶️</button>
-                <button class="control-btn">⏭</button>
-            </div>
-        </div>
+            <p style="text-align: center; color: var(--text-muted); width: 100%; grid-column: 1/-1;">Search for a video to start watching.</p>
+        </main>
     </div>
     <script src="script.js"></script>
 </body>
