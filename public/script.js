@@ -5,7 +5,8 @@ let currentQuery = 'Trending Music';
 let isFetching = false;
 let progressInterval;
 
-// --- YOUTUBE IFRAME API SETUP ---
+// --- 1. YOUTUBE API SETUP ---
+// This function is automatically called by the script loaded in HTML
 function onYouTubeIframeAPIReady() {
     player = new YT.Player('ytPlayer', {
         height: '100%', width: '100%',
@@ -20,7 +21,7 @@ function onYouTubeIframeAPIReady() {
     });
 }
 
-// --- CUSTOM PLAYER CONTROLS ---
+// --- 2. CUSTOM PLAYER LOGIC ---
 function playVideo(videoId, title) {
     if (!isPlayerReady) return;
     
@@ -31,7 +32,7 @@ function playVideo(videoId, title) {
     document.getElementById('playPauseBtn').innerText = '⏸️';
     window.scrollTo({ top: 0, behavior: 'smooth' });
 
-    // Force controls to show briefly on mobile
+    // Flash the custom controls briefly for mobile users
     const controls = document.getElementById('customControls');
     controls.style.opacity = '1';
     setTimeout(() => { controls.style.opacity = ''; }, 3000);
@@ -39,13 +40,22 @@ function playVideo(videoId, title) {
 
 function togglePlay() {
     const state = player.getPlayerState();
-    if (state === 1) { player.pauseVideo(); } 
-    else { player.playVideo(); }
+    if (state === 1 || state === 3) { // 1 = playing, 3 = buffering
+        player.pauseVideo(); 
+    } else { 
+        player.playVideo(); 
+    }
 }
 
 function toggleMute() {
-    if (player.isMuted()) { player.unMute(); } 
-    else { player.mute(); }
+    const muteBtn = event.currentTarget;
+    if (player.isMuted()) { 
+        player.unMute(); 
+        muteBtn.innerText = '🔊';
+    } else { 
+        player.mute(); 
+        muteBtn.innerText = '🔇';
+    }
 }
 
 function closePlayer() {
@@ -59,46 +69,53 @@ function onPlayerStateChange(event) {
     if (event.data === YT.PlayerState.PLAYING) {
         btn.innerText = '⏸️';
         startProgressBar();
-    } else {
+    } else if (event.data === YT.PlayerState.PAUSED || event.data === YT.PlayerState.ENDED) {
         btn.innerText = '▶️';
         clearInterval(progressInterval);
     }
 }
 
-// Progress Bar Logic
 function startProgressBar() {
     clearInterval(progressInterval);
     progressInterval = setInterval(() => {
         if (player && player.getCurrentTime) {
             const current = player.getCurrentTime();
             const total = player.getDuration();
-            document.getElementById('progressBar').value = (current / total) * 100;
-            document.getElementById('currentTime').innerText = formatTime(current);
-            document.getElementById('totalTime').innerText = formatTime(total);
+            
+            if (total > 0) {
+                document.getElementById('progressBar').value = (current / total) * 100;
+                document.getElementById('currentTime').innerText = formatTime(current);
+                document.getElementById('totalTime').innerText = formatTime(total);
+            }
         }
-    }, 1000);
+    }, 500); // Update every half second for smoothness
 }
 
+// Allow user to click the bar to skip ahead
 document.getElementById('progressBar').addEventListener('input', function(e) {
-    const seekTo = (e.target.value / 100) * player.getDuration();
-    player.seekTo(seekTo, true);
+    if (player && player.getDuration) {
+        const seekTo = (e.target.value / 100) * player.getDuration();
+        player.seekTo(seekTo, true);
+    }
 });
 
 function formatTime(seconds) {
+    if (!seconds || isNaN(seconds)) return '0:00';
     const m = Math.floor(seconds / 60);
     const s = Math.floor(seconds % 60);
     return `${m}:${s < 10 ? '0' : ''}${s}`;
 }
 
-// --- INFINITE SCROLL & API LOGIC ---
+// --- 3. FETCH & INFINITE SCROLL ---
+// Auto-load feed on startup
 window.addEventListener('DOMContentLoaded', () => { fetchYouTubeData(currentQuery); });
 
 function handleNewSearch() {
-    const query = document.getElementById('searchInput').value;
+    const query = document.getElementById('searchInput').value.trim();
     if (query) {
         currentQuery = query;
-        currentCursor = null; // Reset cursor for new search
-        document.getElementById('resultsContainer').innerHTML = ''; // Clear old results
+        currentCursor = null; 
+        document.getElementById('resultsContainer').innerHTML = ''; 
         fetchYouTubeData(currentQuery);
     }
 }
@@ -121,15 +138,20 @@ async function fetchYouTubeData(query) {
         const response = await fetch(url);
         const data = await response.json();
 
-        // Save the new pagination token for the NEXT scroll
-        currentCursor = data.cursorNext || null; 
+        if (data.error) {
+            console.error(data.message);
+            return;
+        }
 
+        // Save the cursor for the next scroll request
+        currentCursor = data.cursorNext || null; 
         renderCards(data.contents);
+        
     } catch (error) {
-        console.error("Fetch Error:", error);
+        console.error("Network Fetch Error:", error);
     } finally {
         isFetching = false;
-        if (!currentCursor) sentinel.classList.add('hidden'); // Hide if no more pages
+        if (!currentCursor) sentinel.classList.add('hidden'); // Hide spinner if there is no more data
     }
 }
 
@@ -149,11 +171,11 @@ function renderCards(contents) {
             card.innerHTML = `
                 <div class="thumbnail-wrapper">
                     <img src="${thumbUrl}" onload="this.classList.add('loaded')" loading="lazy">
-                    <span class="duration">${vid.lengthText || ""}</span>
+                    ${vid.lengthText ? `<span class="duration">${vid.lengthText}</span>` : ''}
                 </div>
                 <div class="video-info">
                     <h3>${vid.title}</h3>
-                    <p>${vid.author?.title || 'YouTube'} • ${vid.stats?.views ? formatViews(vid.stats.views) : ''} views</p>
+                    <p>${vid.author?.title || 'YouTube'} • ${vid.stats?.views ? formatViews(vid.stats.views) : ''}</p>
                 </div>
             `;
             container.appendChild(card);
@@ -162,16 +184,18 @@ function renderCards(contents) {
 }
 
 function formatViews(views) {
+    if (!views) return '';
     if (views >= 1000000) return (views / 1000000).toFixed(1) + 'M';
     if (views >= 1000) return (views / 1000).toFixed(1) + 'K';
     return views;
 }
 
-// Intersection Observer for Infinite Scroll
+// Setup the invisible trigger at the bottom of the page
 const observer = new IntersectionObserver((entries) => {
+    // If the sentinel element comes into view AND we have a cursor to load more...
     if (entries[0].isIntersecting && currentCursor && !isFetching) {
         fetchYouTubeData(currentQuery);
     }
-}, { rootMargin: '200px' });
+}, { rootMargin: '300px' }); // Trigger slightly before the user hits the exact bottom
 
 observer.observe(document.getElementById('loadingSentinel'));
