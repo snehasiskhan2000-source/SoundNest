@@ -5,8 +5,28 @@ let currentQuery = 'Trending Music';
 let isFetching = false;
 let progressInterval;
 
-// --- 1. YOUTUBE API SETUP ---
-// This function is automatically called by the script loaded in HTML
+// SVG Templates from HTML
+const svgPlay = document.getElementById('svg-play').innerHTML;
+const svgPause = document.getElementById('svg-pause').innerHTML;
+const svgVol = document.getElementById('svg-vol').innerHTML;
+const svgMute = document.getElementById('svg-mute').innerHTML;
+
+// --- 1. SEARCH BAR ANIMATION LOGIC ---
+const searchInput = document.getElementById('searchInput');
+const searchContainer = document.getElementById('searchContainer');
+const logo = document.querySelector('.logo');
+
+searchInput.addEventListener('focus', () => {
+    searchContainer.classList.add('active');
+    logo.style.opacity = '0'; // Hide logo so search can take full screen width
+});
+
+searchInput.addEventListener('blur', () => {
+    searchContainer.classList.remove('active');
+    logo.style.opacity = '1';
+});
+
+// --- 2. YOUTUBE API SETUP ---
 function onYouTubeIframeAPIReady() {
     player = new YT.Player('ytPlayer', {
         height: '100%', width: '100%',
@@ -21,7 +41,7 @@ function onYouTubeIframeAPIReady() {
     });
 }
 
-// --- 2. CUSTOM PLAYER LOGIC ---
+// --- 3. CUSTOM PLAYER LOGIC WITH SVGs ---
 function playVideo(videoId, title) {
     if (!isPlayerReady) return;
     
@@ -29,10 +49,9 @@ function playVideo(videoId, title) {
     document.getElementById('nowPlayingTitle').innerText = title;
     
     player.loadVideoById(videoId);
-    document.getElementById('playPauseBtn').innerText = '⏸️';
+    document.getElementById('playPauseBtn').innerHTML = svgPause; // Set to pause icon
     window.scrollTo({ top: 0, behavior: 'smooth' });
 
-    // Flash the custom controls briefly for mobile users
     const controls = document.getElementById('customControls');
     controls.style.opacity = '1';
     setTimeout(() => { controls.style.opacity = ''; }, 3000);
@@ -40,21 +59,33 @@ function playVideo(videoId, title) {
 
 function togglePlay() {
     const state = player.getPlayerState();
-    if (state === 1 || state === 3) { // 1 = playing, 3 = buffering
+    const btn = document.getElementById('playPauseBtn');
+    
+    // Add a quick pop animation to the button
+    btn.style.transform = "scale(0.8)";
+    setTimeout(() => btn.style.transform = "", 150);
+
+    if (state === 1 || state === 3) { 
         player.pauseVideo(); 
+        btn.innerHTML = svgPlay;
     } else { 
         player.playVideo(); 
+        btn.innerHTML = svgPause;
     }
 }
 
 function toggleMute() {
-    const muteBtn = event.currentTarget;
+    const muteBtn = document.getElementById('muteBtn');
+    
+    muteBtn.style.transform = "scale(0.8)";
+    setTimeout(() => muteBtn.style.transform = "", 150);
+
     if (player.isMuted()) { 
         player.unMute(); 
-        muteBtn.innerText = '🔊';
+        muteBtn.innerHTML = svgVol;
     } else { 
         player.mute(); 
-        muteBtn.innerText = '🔇';
+        muteBtn.innerHTML = svgMute;
     }
 }
 
@@ -67,10 +98,10 @@ function closePlayer() {
 function onPlayerStateChange(event) {
     const btn = document.getElementById('playPauseBtn');
     if (event.data === YT.PlayerState.PLAYING) {
-        btn.innerText = '⏸️';
+        btn.innerHTML = svgPause;
         startProgressBar();
     } else if (event.data === YT.PlayerState.PAUSED || event.data === YT.PlayerState.ENDED) {
-        btn.innerText = '▶️';
+        btn.innerHTML = svgPlay;
         clearInterval(progressInterval);
     }
 }
@@ -88,10 +119,9 @@ function startProgressBar() {
                 document.getElementById('totalTime').innerText = formatTime(total);
             }
         }
-    }, 500); // Update every half second for smoothness
+    }, 500);
 }
 
-// Allow user to click the bar to skip ahead
 document.getElementById('progressBar').addEventListener('input', function(e) {
     if (player && player.getDuration) {
         const seekTo = (e.target.value / 100) * player.getDuration();
@@ -106,21 +136,21 @@ function formatTime(seconds) {
     return `${m}:${s < 10 ? '0' : ''}${s}`;
 }
 
-// --- 3. FETCH & INFINITE SCROLL ---
-// Auto-load feed on startup
+// --- 4. FETCH & INFINITE SCROLL ---
 window.addEventListener('DOMContentLoaded', () => { fetchYouTubeData(currentQuery); });
 
 function handleNewSearch() {
-    const query = document.getElementById('searchInput').value.trim();
+    const query = searchInput.value.trim();
     if (query) {
         currentQuery = query;
         currentCursor = null; 
         document.getElementById('resultsContainer').innerHTML = ''; 
+        searchInput.blur(); // Drop the mobile keyboard and close the search bar
         fetchYouTubeData(currentQuery);
     }
 }
 
-document.getElementById('searchInput').addEventListener('keypress', e => {
+searchInput.addEventListener('keypress', e => {
     if (e.key === 'Enter') handleNewSearch();
 });
 
@@ -143,7 +173,6 @@ async function fetchYouTubeData(query) {
             return;
         }
 
-        // Save the cursor for the next scroll request
         currentCursor = data.cursorNext || null; 
         renderCards(data.contents);
         
@@ -151,7 +180,7 @@ async function fetchYouTubeData(query) {
         console.error("Network Fetch Error:", error);
     } finally {
         isFetching = false;
-        if (!currentCursor) sentinel.classList.add('hidden'); // Hide spinner if there is no more data
+        if (!currentCursor) sentinel.classList.add('hidden');
     }
 }
 
@@ -190,12 +219,10 @@ function formatViews(views) {
     return views;
 }
 
-// Setup the invisible trigger at the bottom of the page
 const observer = new IntersectionObserver((entries) => {
-    // If the sentinel element comes into view AND we have a cursor to load more...
     if (entries[0].isIntersecting && currentCursor && !isFetching) {
         fetchYouTubeData(currentQuery);
     }
-}, { rootMargin: '300px' }); // Trigger slightly before the user hits the exact bottom
+}, { rootMargin: '300px' });
 
 observer.observe(document.getElementById('loadingSentinel'));
