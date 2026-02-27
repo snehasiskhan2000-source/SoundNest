@@ -11,6 +11,7 @@ app.use(express.static(path.join(__dirname, 'public')));
 const RAPIDAPI_HOST = 'youtube138.p.rapidapi.com';
 const RAPIDAPI_KEY = process.env.RAPIDAPI_KEY;
 
+// 1. YouTube Video Search API
 app.get('/api/search', async (req, res) => {
     try {
         const query = req.query.q;
@@ -19,7 +20,6 @@ app.get('/api/search', async (req, res) => {
         if (!query) return res.status(400).json({ error: "Query is required" });
 
         const params = { q: query, hl: 'en', gl: 'US' };
-        // Attach the cursor to the API call if it exists
         if (cursor) params.cursor = cursor; 
 
         const options = {
@@ -33,12 +33,24 @@ app.get('/api/search', async (req, res) => {
         };
 
         const response = await axios.request(options);
-        
-        // Send the data and the next cursor back to your frontend
         res.json(response.data);
     } catch (error) {
-        console.error("API Error Details:", error.response ? error.response.data : error.message);
-        res.status(500).json({ error: true, message: 'Server connection failed or rate limit reached.' });
+        console.error("Search API Error:", error.message);
+        res.status(500).json({ error: true, message: 'Server connection failed.' });
+    }
+});
+
+// 2. Free Google Autocomplete Proxy
+app.get('/api/suggest', async (req, res) => {
+    try {
+        const query = req.query.q;
+        if (!query) return res.json([]);
+        
+        const response = await axios.get(`http://suggestqueries.google.com/complete/search?client=firefox&ds=yt&q=${encodeURIComponent(query)}`);
+        res.json(response.data[1]);
+    } catch (error) {
+        console.error("Suggest API Error:", error.message);
+        res.json([]); 
     }
 });
 
