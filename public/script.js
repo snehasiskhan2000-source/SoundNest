@@ -11,14 +11,14 @@ const svgPause = document.getElementById('svg-pause').innerHTML;
 const svgVol = document.getElementById('svg-vol').innerHTML;
 const svgMute = document.getElementById('svg-mute').innerHTML;
 
-// --- 1. SEARCH BAR ANIMATION LOGIC ---
+// SEARCH BAR ANIMATION LOGIC
 const searchInput = document.getElementById('searchInput');
 const searchContainer = document.getElementById('searchContainer');
 const logo = document.querySelector('.logo');
 
 searchInput.addEventListener('focus', () => {
     searchContainer.classList.add('active');
-    logo.style.opacity = '0'; // Hide logo so search can take full screen width
+    logo.style.opacity = '0';
 });
 
 searchInput.addEventListener('blur', () => {
@@ -26,7 +26,7 @@ searchInput.addEventListener('blur', () => {
     logo.style.opacity = '1';
 });
 
-// --- 2. YOUTUBE API SETUP ---
+// YOUTUBE API SETUP
 function onYouTubeIframeAPIReady() {
     player = new YT.Player('ytPlayer', {
         height: '100%', width: '100%',
@@ -41,7 +41,7 @@ function onYouTubeIframeAPIReady() {
     });
 }
 
-// --- 3. CUSTOM PLAYER LOGIC WITH SVGs ---
+// CUSTOM PLAYER LOGIC WITH SVGs
 function playVideo(videoId, title) {
     if (!isPlayerReady) return;
     
@@ -49,7 +49,7 @@ function playVideo(videoId, title) {
     document.getElementById('nowPlayingTitle').innerText = title;
     
     player.loadVideoById(videoId);
-    document.getElementById('playPauseBtn').innerHTML = svgPause; // Set to pause icon
+    document.getElementById('playPauseBtn').innerHTML = svgPause; 
     window.scrollTo({ top: 0, behavior: 'smooth' });
 
     const controls = document.getElementById('customControls');
@@ -61,7 +61,6 @@ function togglePlay() {
     const state = player.getPlayerState();
     const btn = document.getElementById('playPauseBtn');
     
-    // Add a quick pop animation to the button
     btn.style.transform = "scale(0.8)";
     setTimeout(() => btn.style.transform = "", 150);
 
@@ -136,7 +135,7 @@ function formatTime(seconds) {
     return `${m}:${s < 10 ? '0' : ''}${s}`;
 }
 
-// --- 4. FETCH & INFINITE SCROLL ---
+// FETCH & INFINITE SCROLL
 window.addEventListener('DOMContentLoaded', () => { fetchYouTubeData(currentQuery); });
 
 function handleNewSearch() {
@@ -145,7 +144,7 @@ function handleNewSearch() {
         currentQuery = query;
         currentCursor = null; 
         document.getElementById('resultsContainer').innerHTML = ''; 
-        searchInput.blur(); // Drop the mobile keyboard and close the search bar
+        searchInput.blur(); 
         fetchYouTubeData(currentQuery);
     }
 }
@@ -184,6 +183,7 @@ async function fetchYouTubeData(query) {
     }
 }
 
+// UPDATED RENDER FUNCTION WITH DURATION FIX
 function renderCards(contents) {
     const container = document.getElementById('resultsContainer');
     if (!contents) return;
@@ -193,6 +193,21 @@ function renderCards(contents) {
             const vid = item.video;
             const thumbUrl = vid.thumbnails[vid.thumbnails.length - 1].url;
             
+            let durationText = "";
+            if (vid.lengthText) {
+                durationText = vid.lengthText;
+            } else if (vid.lengthSeconds) {
+                const hours = Math.floor(vid.lengthSeconds / 3600);
+                const minutes = Math.floor((vid.lengthSeconds % 3600) / 60);
+                const seconds = vid.lengthSeconds % 60;
+                
+                if (hours > 0) {
+                    durationText = `${hours}:${minutes < 10 ? '0' : ''}${minutes}:${seconds < 10 ? '0' : ''}${seconds}`;
+                } else {
+                    durationText = `${minutes}:${seconds < 10 ? '0' : ''}${seconds}`;
+                }
+            }
+            
             const card = document.createElement('div');
             card.className = 'video-card';
             card.onclick = () => playVideo(vid.videoId, vid.title);
@@ -200,7 +215,7 @@ function renderCards(contents) {
             card.innerHTML = `
                 <div class="thumbnail-wrapper">
                     <img src="${thumbUrl}" onload="this.classList.add('loaded')" loading="lazy">
-                    ${vid.lengthText ? `<span class="duration">${vid.lengthText}</span>` : ''}
+                    ${durationText ? `<span class="duration">${durationText}</span>` : ''}
                 </div>
                 <div class="video-info">
                     <h3>${vid.title}</h3>
