@@ -44,7 +44,7 @@ input { flex: 1; padding: 12px 20px; border: none; background: transparent; colo
 /* Custom Player Layout with SVGs */
 .player-container { position: sticky; top: 80px; z-index: 1000; width: 100%; max-width: 800px; margin: 0 auto 30px auto; background: #000; border-radius: 16px; overflow: hidden; box-shadow: 0 15px 35px rgba(255, 0, 0, 0.15); border: 1px solid #333; animation: slideDown 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275); }
 .player-container.hidden { display: none; }
-.video-wrapper { position: relative; padding-bottom: 56.25%; height: 0; background: #000; overflow: hidden; pointer-events: none; }
+.video-wrapper { position: relative; padding-bottom: 56.25%; height: 0; background: #000; overflow: hidden; cursor: pointer; }
 .video-wrapper iframe { position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; }
 
 .custom-controls { position: absolute; bottom: 0; left: 0; width: 100%; background: linear-gradient(transparent, rgba(0,0,0,0.9)); padding: 30px 15px 15px 15px; display: flex; align-items: center; gap: 20px; z-index: 10; pointer-events: auto; opacity: 0; transition: opacity 0.3s; }
@@ -99,3 +99,13 @@ input { flex: 1; padding: 12px 20px; border: none; background: transparent; colo
     .search-bar button { padding: 0 15px; }
     .results-grid { grid-template-columns: 1fr; gap: 30px; }
 }
+
+/* --- FULL SCREEN NATIVE API SUPPORT --- */
+.player-container:fullscreen { max-width: 100%; width: 100vw; height: 100vh; margin: 0; border-radius: 0; border: none; background: #000; }
+.player-container:fullscreen .video-wrapper { padding-bottom: 0; height: 100vh; }
+.player-container:fullscreen .player-header { position: absolute; top: 0; left: 0; width: 100%; z-index: 20; background: linear-gradient(rgba(0,0,0,0.9), transparent); border: none; }
+
+/* Safari WebKit Support */
+.player-container:-webkit-full-screen { max-width: 100%; width: 100vw; height: 100vh; margin: 0; border-radius: 0; border: none; background: #000; }
+.player-container:-webkit-full-screen .video-wrapper { padding-bottom: 0; height: 100vh; }
+.player-container:-webkit-full-screen .player-header { position: absolute; top: 0; left: 0; width: 100%; z-index: 20; background: linear-gradient(rgba(0,0,0,0.9), transparent); border: none; }
