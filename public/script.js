@@ -1,105 +1,164 @@
-// Automatically load trending videos when the page opens
-window.addEventListener('DOMContentLoaded', () => {
-    fetchYouTubeData('Trending Music 2026');
-});
+let player;
+let isPlayerReady = false;
+let currentCursor = null;
+let currentQuery = 'Trending Music';
+let isFetching = false;
+let progressInterval;
 
-// Triggered when user types and clicks search
-function handleSearch() {
-    const query = document.getElementById('searchInput').value;
-    if (query) {
-        fetchYouTubeData(query);
-    }
+// --- YOUTUBE IFRAME API SETUP ---
+function onYouTubeIframeAPIReady() {
+    player = new YT.Player('ytPlayer', {
+        height: '100%', width: '100%',
+        playerVars: { 
+            'autoplay': 1, 'controls': 0, 'disablekb': 1, 
+            'fs': 0, 'modestbranding': 1, 'rel': 0, 'showinfo': 0 
+        },
+        events: {
+            'onReady': () => { isPlayerReady = true; },
+            'onStateChange': onPlayerStateChange
+        }
+    });
 }
 
-// Allow pressing "Enter" to search
-document.getElementById('searchInput').addEventListener('keypress', function (e) {
-    if (e.key === 'Enter') handleSearch();
-});
-
-// The main fetch function
-async function fetchYouTubeData(query) {
-    const container = document.getElementById('resultsContainer');
-    
-    // Animated loading state
-    container.innerHTML = `
-        <div class="loader-container">
-            <div class="spinner"></div>
-            <p style="color: var(--text-muted);">Fetching highest quality streams...</p>
-        </div>
-    `;
-
-    try {
-        const response = await fetch(`/api/search?q=${encodeURIComponent(query)}`);
-        const data = await response.json();
-        
-        container.innerHTML = ''; 
-
-        if (data.error) {
-            container.innerHTML = `<p style="color: #ff3333; text-align: center; width: 100%; grid-column: 1/-1;">⚠️ ${data.message}</p>`;
-            return;
-        }
-
-        if (data.contents && data.contents.length > 0) {
-            data.contents.forEach(item => {
-                if (item.video) {
-                    const vid = item.video;
-                    const videoId = vid.videoId;
-                    const title = vid.title;
-                    const author = vid.author ? vid.author.title : 'YouTube';
-                    const views = vid.stats && vid.stats.views ? formatViews(vid.stats.views) : '';
-                    
-                    const thumbUrl = vid.thumbnails[vid.thumbnails.length - 1].url;
-                    const durationText = vid.lengthText || "";
-
-                    const card = document.createElement('div');
-                    card.className = 'video-card';
-                    card.onclick = () => playVideo(videoId, title);
-                    
-                    card.innerHTML = `
-                        <div class="thumbnail-wrapper">
-                            <img src="${thumbUrl}" alt="Thumbnail" loading="lazy">
-                            ${durationText ? `<span class="duration">${durationText}</span>` : ''}
-                        </div>
-                        <div class="video-info">
-                            <h3>${title}</h3>
-                            <p>${author} • ${views} views</p>
-                        </div>
-                    `;
-                    container.appendChild(card);
-                }
-            });
-        } else {
-            container.innerHTML = `<p style="color: var(--text-muted); text-align: center; width: 100%; grid-column: 1/-1;">No results found.</p>`;
-        }
-    } catch (error) {
-        console.error("Frontend Error:", error);
-        container.innerHTML = '<p style="color: #ff3333; text-align: center; width: 100%; grid-column: 1/-1;">⚠️ Failed to connect to server.</p>';
-    }
-}
-
+// --- CUSTOM PLAYER CONTROLS ---
 function playVideo(videoId, title) {
-    const playerSection = document.getElementById('playerSection');
-    const ytPlayer = document.getElementById('ytPlayer');
-    const titleEl = document.getElementById('nowPlayingTitle');
-
-    // Show the sticky player
-    playerSection.classList.remove('hidden');
-    titleEl.innerText = title;
-
-    // Load video with autoplay
-    ytPlayer.src = `https://www.youtube.com/embed/${videoId}?autoplay=1`;
-
-    // Smoothly scroll to the top so the user sees the player
+    if (!isPlayerReady) return;
+    
+    document.getElementById('playerSection').classList.remove('hidden');
+    document.getElementById('nowPlayingTitle').innerText = title;
+    
+    player.loadVideoById(videoId);
+    document.getElementById('playPauseBtn').innerText = '⏸️';
     window.scrollTo({ top: 0, behavior: 'smooth' });
+
+    // Force controls to show briefly on mobile
+    const controls = document.getElementById('customControls');
+    controls.style.opacity = '1';
+    setTimeout(() => { controls.style.opacity = ''; }, 3000);
+}
+
+function togglePlay() {
+    const state = player.getPlayerState();
+    if (state === 1) { player.pauseVideo(); } 
+    else { player.playVideo(); }
+}
+
+function toggleMute() {
+    if (player.isMuted()) { player.unMute(); } 
+    else { player.mute(); }
 }
 
 function closePlayer() {
-    const playerSection = document.getElementById('playerSection');
-    const ytPlayer = document.getElementById('ytPlayer');
+    document.getElementById('playerSection').classList.add('hidden');
+    player.stopVideo();
+    clearInterval(progressInterval);
+}
+
+function onPlayerStateChange(event) {
+    const btn = document.getElementById('playPauseBtn');
+    if (event.data === YT.PlayerState.PLAYING) {
+        btn.innerText = '⏸️';
+        startProgressBar();
+    } else {
+        btn.innerText = '▶️';
+        clearInterval(progressInterval);
+    }
+}
+
+// Progress Bar Logic
+function startProgressBar() {
+    clearInterval(progressInterval);
+    progressInterval = setInterval(() => {
+        if (player && player.getCurrentTime) {
+            const current = player.getCurrentTime();
+            const total = player.getDuration();
+            document.getElementById('progressBar').value = (current / total) * 100;
+            document.getElementById('currentTime').innerText = formatTime(current);
+            document.getElementById('totalTime').innerText = formatTime(total);
+        }
+    }, 1000);
+}
+
+document.getElementById('progressBar').addEventListener('input', function(e) {
+    const seekTo = (e.target.value / 100) * player.getDuration();
+    player.seekTo(seekTo, true);
+});
+
+function formatTime(seconds) {
+    const m = Math.floor(seconds / 60);
+    const s = Math.floor(seconds % 60);
+    return `${m}:${s < 10 ? '0' : ''}${s}`;
+}
+
+// --- INFINITE SCROLL & API LOGIC ---
+window.addEventListener('DOMContentLoaded', () => { fetchYouTubeData(currentQuery); });
+
+function handleNewSearch() {
+    const query = document.getElementById('searchInput').value;
+    if (query) {
+        currentQuery = query;
+        currentCursor = null; // Reset cursor for new search
+        document.getElementById('resultsContainer').innerHTML = ''; // Clear old results
+        fetchYouTubeData(currentQuery);
+    }
+}
+
+document.getElementById('searchInput').addEventListener('keypress', e => {
+    if (e.key === 'Enter') handleNewSearch();
+});
+
+async function fetchYouTubeData(query) {
+    if (isFetching) return;
+    isFetching = true;
     
-    // Hide player and stop audio by clearing the source
-    playerSection.classList.add('hidden');
-    ytPlayer.src = ''; 
+    const sentinel = document.getElementById('loadingSentinel');
+    sentinel.classList.remove('hidden');
+
+    try {
+        let url = `/api/search?q=${encodeURIComponent(query)}`;
+        if (currentCursor) url += `&cursor=${encodeURIComponent(currentCursor)}`;
+
+        const response = await fetch(url);
+        const data = await response.json();
+
+        // Save the new pagination token for the NEXT scroll
+        currentCursor = data.cursorNext || null; 
+
+        renderCards(data.contents);
+    } catch (error) {
+        console.error("Fetch Error:", error);
+    } finally {
+        isFetching = false;
+        if (!currentCursor) sentinel.classList.add('hidden'); // Hide if no more pages
+    }
+}
+
+function renderCards(contents) {
+    const container = document.getElementById('resultsContainer');
+    if (!contents) return;
+
+    contents.forEach(item => {
+        if (item.video) {
+            const vid = item.video;
+            const thumbUrl = vid.thumbnails[vid.thumbnails.length - 1].url;
+            
+            const card = document.createElement('div');
+            card.className = 'video-card';
+            card.onclick = () => playVideo(vid.videoId, vid.title);
+            
+            card.innerHTML = `
+                <div class="thumbnail-wrapper">
+                    <img src="${thumbUrl}" onload="this.classList.add('loaded')" loading="lazy">
+                    <span class="duration">${vid.lengthText || ""}</span>
+                </div>
+                <div class="video-info">
+                    <h3>${vid.title}</h3>
+                    <p>${vid.author?.title || 'YouTube'} • ${vid.stats?.views ? formatViews(vid.stats.views) : ''} views</p>
+                </div>
+            `;
+            container.appendChild(card);
+        }
+    });
 }
 
 function formatViews(views) {
@@ -107,3 +166,12 @@ function formatViews(views) {
     if (views >= 1000) return (views / 1000).toFixed(1) + 'K';
     return views;
 }
+
+// Intersection Observer for Infinite Scroll
+const observer = new IntersectionObserver((entries) => {
+    if (entries[0].isIntersecting && currentCursor && !isFetching) {
+        fetchYouTubeData(currentQuery);
+    }
+}, { rootMargin: '200px' });
+
+observer.observe(document.getElementById('loadingSentinel'));
