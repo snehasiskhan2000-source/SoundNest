@@ -3,29 +3,35 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>TubeNest | Video & Music</title>
+    <title>YouTube Premium</title>
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700;900&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
-    <div class="app-container">
-        <header>
-            <h1><span class="highlight">Tube</span>Nest</h1>
-            <div class="search-bar">
-                <input type="text" id="searchInput" placeholder="Search YouTube videos & music...">
-                <button onclick="searchYouTube()">Search</button>
-            </div>
-        </header>
+    <nav class="premium-nav">
+        <div class="logo">
+            <div class="play-icon">▶</div>
+            <h1>YouTube <span>Premium</span></h1>
+        </div>
+        <div class="search-bar">
+            <input type="text" id="searchInput" placeholder="Search YouTube...">
+            <button onclick="handleSearch()">🔍</button>
+        </div>
+    </nav>
 
+    <div class="app-container">
         <div id="playerSection" class="player-container hidden">
             <div class="video-wrapper">
                 <iframe id="ytPlayer" src="" frameborder="0" allow="autoplay; encrypted-media; picture-in-picture" allowfullscreen></iframe>
             </div>
-            <h2 id="nowPlayingTitle">Loading...</h2>
+            <div class="player-controls">
+                <h2 id="nowPlayingTitle">Loading...</h2>
+                <button class="close-btn" onclick="closePlayer()">✕ Close</button>
+            </div>
         </div>
 
         <main id="resultsContainer" class="results-grid">
-            <p style="text-align: center; color: var(--text-muted); width: 100%; grid-column: 1/-1;">Search for a video to start watching.</p>
-        </main>
+            </main>
     </div>
     <script src="script.js"></script>
 </body>
