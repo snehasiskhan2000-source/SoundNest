@@ -5,29 +5,79 @@ let currentQuery = 'Trending Music';
 let isFetching = false;
 let progressInterval;
 
-// --- SVG Templates from HTML ---
+// SVG Templates from HTML
 const svgPlay = document.getElementById('svg-play').innerHTML;
 const svgPause = document.getElementById('svg-pause').innerHTML;
 const svgVol = document.getElementById('svg-vol').innerHTML;
 const svgMute = document.getElementById('svg-mute').innerHTML;
 
-// --- 1. SEARCH BAR ANIMATION LOGIC ---
+// --- 1. SEARCH BAR & AUTOCOMPLETE LOGIC ---
 const searchInput = document.getElementById('searchInput');
-const searchContainer = document.getElementById('searchContainer');
+const searchWrapper = document.getElementById('searchWrapper');
 const logo = document.querySelector('.logo');
+const suggestionsBox = document.getElementById('suggestionsBox');
+let debounceTimer;
 
 searchInput.addEventListener('focus', () => {
-    searchContainer.classList.add('active');
+    searchWrapper.classList.add('active');
     logo.style.opacity = '0';
+    if (suggestionsBox.innerHTML.trim() !== '') {
+        suggestionsBox.classList.remove('hidden');
+    }
 });
 
-searchInput.addEventListener('blur', () => {
-    searchContainer.classList.remove('active');
-    logo.style.opacity = '1';
+document.addEventListener('click', (e) => {
+    if (!searchWrapper.contains(e.target)) {
+        searchWrapper.classList.remove('active');
+        logo.style.opacity = '1';
+        suggestionsBox.classList.add('hidden');
+    }
 });
+
+// The Debounced Autocomplete Fetcher
+searchInput.addEventListener('input', (e) => {
+    clearTimeout(debounceTimer);
+    const query = e.target.value.trim();
+
+    if (!query) {
+        suggestionsBox.classList.add('hidden');
+        return;
+    }
+
+    debounceTimer = setTimeout(async () => {
+        try {
+            const res = await fetch(`/api/suggest?q=${encodeURIComponent(query)}`);
+            const suggestions = await res.json();
+            renderSuggestions(suggestions);
+        } catch (err) {
+            console.error("Autocomplete failed:", err);
+        }
+    }, 300); 
+});
+
+function renderSuggestions(suggestions) {
+    if (!suggestions || suggestions.length === 0) {
+        suggestionsBox.classList.add('hidden');
+        return;
+    }
+
+    suggestionsBox.innerHTML = '';
+    suggestions.forEach(suggestion => {
+        const li = document.createElement('li');
+        li.className = 'suggestion-item';
+        li.innerHTML = `<svg viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z"/></svg> ${suggestion}`;
+        
+        li.onclick = () => {
+            searchInput.value = suggestion;
+            suggestionsBox.classList.add('hidden');
+            handleNewSearch();
+        };
+        suggestionsBox.appendChild(li);
+    });
+    suggestionsBox.classList.remove('hidden');
+}
 
 // --- 2. YOUTUBE API SETUP ---
-// We leave this empty so it doesn't crash when the hidden player has no size
 function onYouTubeIframeAPIReady() {
     console.log("YouTube API loaded. Waiting for user click...");
 }
@@ -36,11 +86,9 @@ function onYouTubeIframeAPIReady() {
 function playVideo(videoId, title) {
     const playerSection = document.getElementById('playerSection');
     
-    // 1. Unhide the container FIRST so YouTube can calculate its size
     playerSection.classList.remove('hidden');
     document.getElementById('nowPlayingTitle').innerText = title;
     
-    // 2. If this is the first click, build the actual player
     if (!player) {
         player = new YT.Player('ytPlayer', {
             height: '100%', width: '100%',
@@ -58,17 +106,14 @@ function playVideo(videoId, title) {
             }
         });
     } else {
-        // 3. If player is already built, just swap the video
         if (isPlayerReady) {
             player.loadVideoById(videoId);
         }
     }
     
-    // Update UI buttons
     document.getElementById('playPauseBtn').innerHTML = svgPause; 
     window.scrollTo({ top: 0, behavior: 'smooth' });
 
-    // Flash the custom controls briefly for mobile users
     const controls = document.getElementById('customControls');
     controls.style.opacity = '1';
     setTimeout(() => { controls.style.opacity = ''; }, 3000);
@@ -79,7 +124,6 @@ function togglePlay() {
     const state = player.getPlayerState();
     const btn = document.getElementById('playPauseBtn');
     
-    // Quick pop animation
     btn.style.transform = "scale(0.8)";
     setTimeout(() => btn.style.transform = "", 150);
 
@@ -165,6 +209,9 @@ function handleNewSearch() {
         currentCursor = null; 
         document.getElementById('resultsContainer').innerHTML = ''; 
         searchInput.blur(); 
+        searchWrapper.classList.remove('active');
+        logo.style.opacity = '1';
+        suggestionsBox.classList.add('hidden');
         fetchYouTubeData(currentQuery);
     }
 }
@@ -213,7 +260,6 @@ function renderCards(contents) {
             const vid = item.video;
             const thumbUrl = vid.thumbnails[vid.thumbnails.length - 1].url;
             
-            // Format duration accurately
             let durationText = "";
             if (vid.lengthText) {
                 durationText = vid.lengthText;
@@ -255,7 +301,6 @@ function formatViews(views) {
     return views;
 }
 
-// Infinite Scroll Observer
 const observer = new IntersectionObserver((entries) => {
     if (entries[0].isIntersecting && currentCursor && !isFetching) {
         fetchYouTubeData(currentQuery);
@@ -263,4 +308,3 @@ const observer = new IntersectionObserver((entries) => {
 }, { rootMargin: '300px' });
 
 observer.observe(document.getElementById('loadingSentinel'));
-                                                                                                              
