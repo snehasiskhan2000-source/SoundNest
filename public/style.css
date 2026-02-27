@@ -91,15 +91,6 @@ input { flex: 1; padding: 12px 20px; border: none; background: transparent; colo
 @keyframes slideDown { from { opacity: 0; transform: translateY(-30px); } to { opacity: 1; transform: translateY(0); } }
 @keyframes popIn { 0% { transform: scale(0.9); opacity: 0; } 100% { transform: scale(1); opacity: 1; } }
 
-/* Mobile Tweaks */
-@media (max-width: 600px) {
-    .logo h1 { font-size: 1.1rem; }
-    .search-wrapper { max-width: 150px; }
-    .search-bar input { padding: 8px 10px; font-size: 0.95rem; }
-    .search-bar button { padding: 0 15px; }
-    .results-grid { grid-template-columns: 1fr; gap: 30px; }
-}
-
 /* --- FULL SCREEN NATIVE API SUPPORT --- */
 .player-container:fullscreen { max-width: 100%; width: 100vw; height: 100vh; margin: 0; border-radius: 0; border: none; background: #000; }
 .player-container:fullscreen .video-wrapper { padding-bottom: 0; height: 100vh; }
@@ -109,3 +100,17 @@ input { flex: 1; padding: 12px 20px; border: none; background: transparent; colo
 .player-container:-webkit-full-screen { max-width: 100%; width: 100vw; height: 100vh; margin: 0; border-radius: 0; border: none; background: #000; }
 .player-container:-webkit-full-screen .video-wrapper { padding-bottom: 0; height: 100vh; }
 .player-container:-webkit-full-screen .player-header { position: absolute; top: 0; left: 0; width: 100%; z-index: 20; background: linear-gradient(rgba(0,0,0,0.9), transparent); border: none; }
+
+/* Mobile Tweaks */
+@media (max-width: 600px) {
+    .logo h1 { font-size: 1.1rem; }
+    .search-wrapper { max-width: 150px; }
+    .search-bar input { padding: 8px 10px; font-size: 0.95rem; }
+    .search-bar button { padding: 0 15px; }
+    .results-grid { grid-template-columns: 1fr; gap: 30px; }
+    
+    /* Fix Player Controls Overflow on Mobile */
+    .custom-controls { gap: 8px; padding: 25px 8px 10px 8px; }
+    .progress-container { gap: 5px; font-size: 0.7rem; }
+    .ctrl-btn svg { width: 22px; height: 22px; }
+}
