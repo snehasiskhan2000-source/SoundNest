@@ -34,7 +34,6 @@ document.addEventListener('click', (e) => {
     }
 });
 
-// The Debounced Autocomplete Fetcher
 searchInput.addEventListener('input', (e) => {
     clearTimeout(debounceTimer);
     const query = e.target.value.trim();
@@ -78,37 +77,36 @@ function renderSuggestions(suggestions) {
 }
 
 // --- 2. YOUTUBE API SETUP ---
+// We initialize this immediately on load now! The new CSS trick handles the sizing.
 function onYouTubeIframeAPIReady() {
-    console.log("YouTube API loaded. Waiting for user click...");
+    player = new YT.Player('ytPlayer', {
+        height: '100%', width: '100%',
+        playerVars: { 
+            'autoplay': 1, 'controls': 0, 'disablekb': 1, 
+            'fs': 0, 'modestbranding': 1, 'rel': 0, 'showinfo': 0, 'playsinline': 1 
+        },
+        events: {
+            'onReady': () => { 
+                isPlayerReady = true; 
+                console.log("Player fully loaded in background.");
+            },
+            'onStateChange': onPlayerStateChange
+        }
+    });
 }
 
 // --- 3. CUSTOM PLAYER LOGIC WITH SVGs ---
 function playVideo(videoId, title) {
     const playerSection = document.getElementById('playerSection');
     
+    // Teleport the player onto the screen
     playerSection.classList.remove('hidden');
     document.getElementById('nowPlayingTitle').innerText = title;
     
-    if (!player) {
-        player = new YT.Player('ytPlayer', {
-            height: '100%', width: '100%',
-            videoId: videoId, 
-            playerVars: { 
-                'autoplay': 1, 'controls': 0, 'disablekb': 1, 
-                'fs': 0, 'modestbranding': 1, 'rel': 0, 'showinfo': 0 
-            },
-            events: {
-                'onReady': (event) => { 
-                    isPlayerReady = true; 
-                    event.target.playVideo(); 
-                },
-                'onStateChange': onPlayerStateChange
-            }
-        });
+    if (isPlayerReady) {
+        player.loadVideoById(videoId);
     } else {
-        if (isPlayerReady) {
-            player.loadVideoById(videoId);
-        }
+        console.error("YouTube API hasn't finished loading yet!");
     }
     
     document.getElementById('playPauseBtn').innerHTML = svgPause; 
@@ -119,7 +117,6 @@ function playVideo(videoId, title) {
     setTimeout(() => { controls.style.opacity = ''; }, 3000);
 }
 
-// Handle tapping anywhere on the video wrapper to play/pause
 function handleVideoTap(event) {
     if (event.target.closest('.custom-controls')) return;
     togglePlay();
@@ -158,7 +155,6 @@ function toggleMute() {
     }
 }
 
-// Request Native Browser Fullscreen
 function toggleFullScreen() {
     const playerElem = document.getElementById('playerSection');
     if (!document.fullscreenElement && !document.webkitFullscreenElement) {
@@ -182,11 +178,9 @@ function closePlayer() {
     clearInterval(progressInterval);
 }
 
-// 💀 THE HD HACK IS HERE
 function onPlayerStateChange(event) {
     const btn = document.getElementById('playPauseBtn');
     
-    // Aggressively request 1080p as soon as the video buffers or plays
     if (event.data === YT.PlayerState.BUFFERING || event.data === YT.PlayerState.PLAYING) {
         if (player.setPlaybackQuality) {
             player.setPlaybackQuality('hd1080'); 
@@ -292,11 +286,12 @@ function renderCards(contents) {
         if (item.video) {
             const vid = item.video;
             
-            // Mathematically extract the highest resolution thumbnail available
+            // Mathematically extract the highest resolution thumbnail
             const bestThumb = vid.thumbnails.reduce((max, thumb) => (thumb.width > max.width ? thumb : max), vid.thumbnails[0]);
-            const thumbUrl = bestThumb.url;
             
-            // Format duration accurately
+            // 💀 THE THUMBNAIL FIX: Split off the blurry compression tags
+            const thumbUrl = bestThumb.url.split('?')[0]; 
+            
             let durationText = "";
             if (vid.lengthText) {
                 durationText = vid.lengthText;
@@ -338,7 +333,6 @@ function formatViews(views) {
     return views;
 }
 
-// Infinite Scroll Observer
 const observer = new IntersectionObserver((entries) => {
     if (entries[0].isIntersecting && currentCursor && !isFetching) {
         fetchYouTubeData(currentQuery);
@@ -346,3 +340,4 @@ const observer = new IntersectionObserver((entries) => {
 }, { rootMargin: '300px' });
 
 observer.observe(document.getElementById('loadingSentinel'));
+            
