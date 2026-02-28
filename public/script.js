@@ -182,8 +182,17 @@ function closePlayer() {
     clearInterval(progressInterval);
 }
 
+// 💀 THE HD HACK IS HERE
 function onPlayerStateChange(event) {
     const btn = document.getElementById('playPauseBtn');
+    
+    // Aggressively request 1080p as soon as the video buffers or plays
+    if (event.data === YT.PlayerState.BUFFERING || event.data === YT.PlayerState.PLAYING) {
+        if (player.setPlaybackQuality) {
+            player.setPlaybackQuality('hd1080'); 
+        }
+    }
+
     if (event.data === YT.PlayerState.PLAYING) {
         btn.innerHTML = svgPause;
         startProgressBar();
