@@ -77,45 +77,46 @@ function renderSuggestions(suggestions) {
 }
 
 // --- 2. YOUTUBE API SETUP ---
+// 💀 THE FIX: We build the player IMMEDIATELY on load to bypass mobile restrictions
 function onYouTubeIframeAPIReady() {
-    console.log("YouTube API Ready.");
+    player = new YT.Player('ytPlayer', {
+        height: '100%', width: '100%',
+        videoId: 'M7lc1UVf-VE', // Dummy video ID required to initialize correctly
+        playerVars: { 
+            'autoplay': 0, 'controls': 0, 'disablekb': 1, 
+            'fs': 0, 'modestbranding': 1, 'rel': 0, 'showinfo': 0, 'playsinline': 1 
+        },
+        events: {
+            'onReady': (event) => { 
+                isPlayerReady = true; 
+                event.target.mute(); // Muting it satisfies mobile autoplay policies
+                console.log("Player fully loaded & muted in background.");
+            },
+            'onStateChange': onPlayerStateChange
+        }
+    });
 }
 
 // --- 3. CUSTOM PLAYER LOGIC WITH SVGs ---
 function playVideo(videoId, title) {
-    const playerSection = document.getElementById('playerSection');
-    
-    // Safety check: Wait for API to load fully
-    if (typeof YT === 'undefined' || !YT.Player) {
-        console.warn("YouTube API not ready. Retrying in 500ms...");
+    if (!isPlayerReady) {
+        console.warn("YouTube API not ready yet. Retrying in 500ms...");
         setTimeout(() => playVideo(videoId, title), 500);
         return;
     }
+
+    const playerSection = document.getElementById('playerSection');
     
+    // Teleport player onto screen
     playerSection.classList.remove('hidden');
     document.getElementById('nowPlayingTitle').innerText = title;
     
-    if (!player) {
-        player = new YT.Player('ytPlayer', {
-            height: '100%', width: '100%',
-            videoId: videoId, 
-            playerVars: { 
-                'autoplay': 1, 'controls': 0, 'disablekb': 1, 
-                'fs': 0, 'modestbranding': 1, 'rel': 0, 'showinfo': 0, 'playsinline': 1 
-            },
-            events: {
-                'onReady': (event) => { 
-                    isPlayerReady = true; 
-                    event.target.playVideo(); 
-                },
-                'onStateChange': onPlayerStateChange
-            }
-        });
-    } else {
-        if (isPlayerReady) {
-            player.loadVideoById(videoId);
-        }
-    }
+    // Unmute the player now that the user explicitly clicked
+    player.unMute();
+    document.getElementById('muteBtn').innerHTML = svgVol;
+
+    // Load and play the specific video
+    player.loadVideoById({videoId: videoId});
     
     document.getElementById('playPauseBtn').innerHTML = svgPause; 
     window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -189,7 +190,7 @@ function closePlayer() {
 function onPlayerStateChange(event) {
     const btn = document.getElementById('playPauseBtn');
     
-    // Aggressive HD request
+    // Request HD
     if (event.data === YT.PlayerState.BUFFERING || event.data === YT.PlayerState.PLAYING) {
         if (player.setPlaybackQuality) {
             player.setPlaybackQuality('hd1080'); 
@@ -295,9 +296,21 @@ function renderCards(contents) {
         if (item.video) {
             const vid = item.video;
             
-            // THE HD THUMBNAIL FIX: Keep the original URL intact.
-            const bestThumb = vid.thumbnails.reduce((max, thumb) => (thumb.width > max.width ? thumb : max), vid.thumbnails[0]);
-            const thumbUrl = bestThumb.url; 
+            // 💀 THE HD THUMBNAIL FIX: Constructing the crisp YouTube URL manually
+            let thumbUrl = '';
+            if (vid.thumbnails && vid.thumbnails.length > 0) {
+                // Sort array to get the biggest width available
+                const sortedThumbs = vid.thumbnails.sort((a, b) => (b.width || 0) - (a.width || 0));
+                thumbUrl = sortedThumbs[0].url;
+
+                // If API gives us the blurry 4:3 default, rewrite the URL to force the 16:9 HD version
+                if (thumbUrl.includes('hqdefault.jpg') && !thumbUrl.includes('sqp')) {
+                    thumbUrl = `https://i.ytimg.com/vi/${vid.videoId}/hq720.jpg`;
+                }
+            } else {
+                // Absolute fallback
+                thumbUrl = `https://i.ytimg.com/vi/${vid.videoId}/hq720.jpg`;
+            }
             
             let durationText = "";
             if (vid.lengthText) {
@@ -347,4 +360,3 @@ const observer = new IntersectionObserver((entries) => {
 }, { rootMargin: '300px' });
 
 observer.observe(document.getElementById('loadingSentinel'));
-                         
