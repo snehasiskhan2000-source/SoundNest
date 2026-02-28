@@ -10,7 +10,7 @@ app.use(express.static(path.join(__dirname, 'public')));
 
 const RAPIDAPI_HOST = 'youtube138.p.rapidapi.com';
 
-// 1. Load all available keys into an array.
+// 1. Load all 5 keys from your .env file
 const apiKeys = [
     process.env.RAPIDAPI_KEY_1,
     process.env.RAPIDAPI_KEY_2,
@@ -25,7 +25,7 @@ if (apiKeys.length === 0) {
 
 let currentKeyIndex = 0;
 
-// 2. The God-Tier Recursive Fetcher for Rate Limits
+// 2. The God-Tier Recursive Fetcher (Auto-Rotates Keys on Limit)
 async function fetchWithKeyRotation(query, cursor, retries = 0) {
     if (retries >= apiKeys.length) {
         throw new Error("ALL_KEYS_EXHAUSTED");
@@ -61,9 +61,7 @@ async function fetchWithKeyRotation(query, cursor, retries = 0) {
     }
 }
 
-// --- API ROUTES ---
-
-// YouTube Video Search API
+// 3. YouTube Video Search API
 app.get('/api/search', async (req, res) => {
     try {
         const query = req.query.q;
@@ -84,7 +82,7 @@ app.get('/api/search', async (req, res) => {
     }
 });
 
-// Free Google Autocomplete Proxy
+// 4. Free Google Autocomplete Proxy
 app.get('/api/suggest', async (req, res) => {
     try {
         const query = req.query.q;
