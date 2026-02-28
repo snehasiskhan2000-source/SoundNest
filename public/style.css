@@ -18,8 +18,6 @@ body { background-color: var(--bg-color); color: var(--text-main); -webkit-font-
 
 /* The Expanding Glowing Search Bar & Live Dropdown */
 .search-wrapper { position: relative; width: 100%; max-width: 400px; display: flex; flex-direction: column; transition: all 0.4s cubic-bezier(0.25, 0.8, 0.25, 1); }
-
-/* 💀 THE OVERFLOW FIX IS HERE */
 .search-wrapper.active { position: absolute; left: 10px; right: 10px; width: auto; max-width: none; z-index: 3000; }
 
 .search-bar { display: flex; width: 100%; background: #121212; border: 1px solid #303030; border-radius: 30px; overflow: hidden; transition: 0.3s; z-index: 2; }
@@ -44,8 +42,11 @@ input { flex: 1; padding: 12px 20px; border: none; background: transparent; colo
 .app-container { max-width: 1200px; margin: 0 auto; padding: 10px; }
 
 /* Custom Player Layout with SVGs */
-.player-container { position: sticky; top: 80px; z-index: 1000; width: 100%; max-width: 800px; margin: 0 auto 30px auto; background: #000; border-radius: 16px; overflow: hidden; box-shadow: 0 15px 35px rgba(255, 0, 0, 0.15); border: 1px solid #333; animation: slideDown 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275); }
-.player-container.hidden { display: none; }
+.player-container { position: sticky; top: 80px; z-index: 1000; width: 100%; max-width: 800px; margin: 0 auto 30px auto; background: #000; border-radius: 16px; overflow: hidden; box-shadow: 0 15px 35px rgba(255, 0, 0, 0.15); border: 1px solid #333; animation: slideDown 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275); transition: opacity 0.3s; }
+
+/* 💀 THE OFF-SCREEN TRICK */
+.player-container.hidden { position: absolute !important; top: -9999px !important; visibility: hidden; opacity: 0; pointer-events: none; animation: none; }
+
 .video-wrapper { position: relative; padding-bottom: 56.25%; height: 0; background: #000; overflow: hidden; cursor: pointer; }
 .video-wrapper iframe { position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; }
 
@@ -98,7 +99,6 @@ input { flex: 1; padding: 12px 20px; border: none; background: transparent; colo
 .player-container:fullscreen .video-wrapper { padding-bottom: 0; height: 100vh; }
 .player-container:fullscreen .player-header { position: absolute; top: 0; left: 0; width: 100%; z-index: 20; background: linear-gradient(rgba(0,0,0,0.9), transparent); border: none; }
 
-/* Safari WebKit Support */
 .player-container:-webkit-full-screen { max-width: 100%; width: 100vw; height: 100vh; margin: 0; border-radius: 0; border: none; background: #000; }
 .player-container:-webkit-full-screen .video-wrapper { padding-bottom: 0; height: 100vh; }
 .player-container:-webkit-full-screen .player-header { position: absolute; top: 0; left: 0; width: 100%; z-index: 20; background: linear-gradient(rgba(0,0,0,0.9), transparent); border: none; }
@@ -106,12 +106,11 @@ input { flex: 1; padding: 12px 20px; border: none; background: transparent; colo
 /* Mobile Tweaks */
 @media (max-width: 600px) {
     .logo h1 { font-size: 1.1rem; }
+    .search-wrapper { max-width: 150px; }
     .search-bar input { padding: 8px 10px; font-size: 0.95rem; }
     .search-bar button { padding: 0 15px; }
     .results-grid { grid-template-columns: 1fr; gap: 30px; }
-    
-    /* Fix Player Controls Overflow on Mobile */
     .custom-controls { gap: 8px; padding: 25px 8px 10px 8px; }
     .progress-container { gap: 5px; font-size: 0.7rem; }
     .ctrl-btn svg { width: 22px; height: 22px; }
-                       }
+}
