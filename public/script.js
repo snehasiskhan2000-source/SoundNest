@@ -77,36 +77,44 @@ function renderSuggestions(suggestions) {
 }
 
 // --- 2. YOUTUBE API SETUP ---
-// We initialize this immediately on load now! The new CSS trick handles the sizing.
 function onYouTubeIframeAPIReady() {
-    player = new YT.Player('ytPlayer', {
-        height: '100%', width: '100%',
-        playerVars: { 
-            'autoplay': 1, 'controls': 0, 'disablekb': 1, 
-            'fs': 0, 'modestbranding': 1, 'rel': 0, 'showinfo': 0, 'playsinline': 1 
-        },
-        events: {
-            'onReady': () => { 
-                isPlayerReady = true; 
-                console.log("Player fully loaded in background.");
-            },
-            'onStateChange': onPlayerStateChange
-        }
-    });
+    console.log("YouTube API Ready.");
 }
 
 // --- 3. CUSTOM PLAYER LOGIC WITH SVGs ---
 function playVideo(videoId, title) {
     const playerSection = document.getElementById('playerSection');
     
-    // Teleport the player onto the screen
+    // Safety check: Wait for API to load fully
+    if (typeof YT === 'undefined' || !YT.Player) {
+        console.warn("YouTube API not ready. Retrying in 500ms...");
+        setTimeout(() => playVideo(videoId, title), 500);
+        return;
+    }
+    
     playerSection.classList.remove('hidden');
     document.getElementById('nowPlayingTitle').innerText = title;
     
-    if (isPlayerReady) {
-        player.loadVideoById(videoId);
+    if (!player) {
+        player = new YT.Player('ytPlayer', {
+            height: '100%', width: '100%',
+            videoId: videoId, 
+            playerVars: { 
+                'autoplay': 1, 'controls': 0, 'disablekb': 1, 
+                'fs': 0, 'modestbranding': 1, 'rel': 0, 'showinfo': 0, 'playsinline': 1 
+            },
+            events: {
+                'onReady': (event) => { 
+                    isPlayerReady = true; 
+                    event.target.playVideo(); 
+                },
+                'onStateChange': onPlayerStateChange
+            }
+        });
     } else {
-        console.error("YouTube API hasn't finished loading yet!");
+        if (isPlayerReady) {
+            player.loadVideoById(videoId);
+        }
     }
     
     document.getElementById('playPauseBtn').innerHTML = svgPause; 
@@ -181,6 +189,7 @@ function closePlayer() {
 function onPlayerStateChange(event) {
     const btn = document.getElementById('playPauseBtn');
     
+    // Aggressive HD request
     if (event.data === YT.PlayerState.BUFFERING || event.data === YT.PlayerState.PLAYING) {
         if (player.setPlaybackQuality) {
             player.setPlaybackQuality('hd1080'); 
@@ -286,11 +295,9 @@ function renderCards(contents) {
         if (item.video) {
             const vid = item.video;
             
-            // Mathematically extract the highest resolution thumbnail
+            // THE HD THUMBNAIL FIX: Keep the original URL intact.
             const bestThumb = vid.thumbnails.reduce((max, thumb) => (thumb.width > max.width ? thumb : max), vid.thumbnails[0]);
-            
-            // 💀 THE THUMBNAIL FIX: Split off the blurry compression tags
-            const thumbUrl = bestThumb.url.split('?')[0]; 
+            const thumbUrl = bestThumb.url; 
             
             let durationText = "";
             if (vid.lengthText) {
@@ -340,4 +347,4 @@ const observer = new IntersectionObserver((entries) => {
 }, { rootMargin: '300px' });
 
 observer.observe(document.getElementById('loadingSentinel'));
-            
+                         
