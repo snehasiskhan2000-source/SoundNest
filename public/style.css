@@ -17,8 +17,14 @@ body { background-color: var(--bg-color); color: var(--text-main); -webkit-font-
 .logo span { font-weight: 400; color: var(--text-muted); }
 
 /* The Expanding Glowing Search Bar & Live Dropdown */
-.search-wrapper { position: relative; width: 100%; max-width: 400px; display: flex; flex-direction: column; transition: all 0.4s cubic-bezier(0.25, 0.8, 0.25, 1); }
-.search-wrapper.active { position: absolute; left: 15px; right: 15px; max-width: none; z-index: 3000; }
+.search-wrapper { position: relative; width: 100%; max-width: 400px; display: flex; flex-direction: column; transition: all 0.4s cubic-bezier(0.25, 0.8, 0.25, 1); }.search-wrapper.active { 
+    position: absolute; 
+    left: 10px; 
+    right: 10px; 
+    width: auto; /* This instantly fixes the overflow */
+    max-width: none; 
+    z-index: 3000; 
+}
 
 .search-bar { display: flex; width: 100%; background: #121212; border: 1px solid #303030; border-radius: 30px; overflow: hidden; transition: 0.3s; z-index: 2; }
 .search-wrapper.active .search-bar { border: 1px solid var(--yt-red); animation: searchGlow 1.5s infinite alternate; }
