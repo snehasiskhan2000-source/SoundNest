@@ -11,7 +11,6 @@ app.use(express.static(path.join(__dirname, 'public')));
 const RAPIDAPI_HOST = 'youtube138.p.rapidapi.com';
 
 // 1. Load all available keys into an array.
-// The .filter() secretly removes any empty lines in case you only add 2 or 3 keys to start!
 const apiKeys = [
     process.env.RAPIDAPI_KEY_1,
     process.env.RAPIDAPI_KEY_2,
@@ -24,12 +23,10 @@ if (apiKeys.length === 0) {
     console.error("CRITICAL ERROR: No API keys found in environment variables!");
 }
 
-// 2. The tracker
 let currentKeyIndex = 0;
 
-// 3. The God-Tier Recursive Fetcher
+// 2. The God-Tier Recursive Fetcher for Rate Limits
 async function fetchWithKeyRotation(query, cursor, retries = 0) {
-    // Failsafe: If we tried all 5 keys and they are ALL dead, we stop to prevent infinite loops.
     if (retries >= apiKeys.length) {
         throw new Error("ALL_KEYS_EXHAUSTED");
     }
@@ -50,21 +47,15 @@ async function fetchWithKeyRotation(query, cursor, retries = 0) {
 
     try {
         const response = await axios.request(options);
-        return response.data; // Success! Return the data.
+        return response.data; 
     } catch (error) {
         const status = error.response ? error.response.status : null;
 
-        // RapidAPI uses 429 (Rate Limit) or 403 (Quota Exceeded)
         if (status === 429 || status === 403 || (error.response && error.response.data.message && error.response.data.message.includes("exceeded"))) {
             console.warn(`💀 Key ${currentKeyIndex + 1} exhausted! Rotating to next key...`);
-            
-            // Move to the next key. The '%' operator automatically loops it back to 0 if it hits the end!
             currentKeyIndex = (currentKeyIndex + 1) % apiKeys.length;
-            
-            // Immediately retry the request with the new key without telling the frontend
             return fetchWithKeyRotation(query, cursor, retries + 1);
         } else {
-            // If it's a different error (like RapidAPI servers being down completely), throw it
             throw error;
         }
     }
@@ -80,7 +71,6 @@ app.get('/api/search', async (req, res) => {
         
         if (!query) return res.status(400).json({ error: "Query is required" });
 
-        // Trigger our secret failover system
         const data = await fetchWithKeyRotation(query, cursor);
         res.json(data);
 
@@ -94,7 +84,7 @@ app.get('/api/search', async (req, res) => {
     }
 });
 
-// Free Google Autocomplete Proxy (Doesn't use RapidAPI keys!)
+// Free Google Autocomplete Proxy
 app.get('/api/suggest', async (req, res) => {
     try {
         const query = req.query.q;
